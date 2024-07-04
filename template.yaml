@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Simple Lambda function to delete unused EC2 instances and their associated EBS voulmes
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 60
+
+Resources:
+  DeleteEC2andEBSFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - Statement:
+            - Sid: EC2Access
+              Effect: Allow
+              Action:
+                - ec2:Get*
+                - ec2:Describe*
+                - ec2:TerminateInstances
+                - ec2:DeleteVolume
+                - ec2:DetachVolume
+                - ebs:*
+              Resource: "*"
+            - Sid: CloudWatchMetricAccess
+              Effect: Allow
+              Action:
+                - cloudwatch:GetMetricStatistics
+              Resource: "*"
+      Architectures:
+        - x86_64
+      Events:
+        DeleteEC2andEBS:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /delete_ec2_and_ebs
+            Method: get
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  DeleteEC2andEBSApi:
+    Description: "API Gateway endpoint URL for Prod stage for Delete EC2 and EBS function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/delete_ec2_and_ebs/"
+  DeleteEC2andEBSFunction:
+    Description: "Delete EC2 and EBS Lambda Function ARN"
+    Value: !GetAtt DeleteEC2andEBSFunction.Arn
+  DeleteEC2andEBSFunctionIamRole:
+    Description: "Implicit IAM Role created for Delete EC2 and EBS function"
+    Value: !GetAtt DeleteEC2andEBSFunctionRole.Arn
